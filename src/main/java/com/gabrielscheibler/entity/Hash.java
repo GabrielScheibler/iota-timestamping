@@ -3,10 +3,20 @@ package com.gabrielscheibler.entity;
 
 public class Hash
 {
-    private String value;
+    private String hash;
 
     public Hash(String value)
     {
-        this.value = value;
+        this.hash = value;
+    }
+
+    public String getHash()
+    {
+        return hash;
+    }
+
+    public void setHash(String hash)
+    {
+        this.hash = hash;
     }
 }
