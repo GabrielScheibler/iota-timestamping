@@ -4,6 +4,8 @@ package com.gabrielscheibler.service;
 import com.gabrielscheibler.entity.Address;
 import com.gabrielscheibler.entity.ApiError;
 import com.gabrielscheibler.entity.Hash;
+import jota.error.ArgumentException;
+import jota.utils.InputValidator;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,7 @@ import java.util.Arrays;
 @Service
 public class AddressService
 {
+
     public ResponseEntity<?> getAddress(Hash hash)
     {
         if (!isSha256(hash))
@@ -73,5 +76,20 @@ public class AddressService
         ret = appendZero(ret);
 
         return ret;
+    }
+
+    public boolean isValidAddress(Address address)
+    {
+        String s = address.getAddress();
+
+        try
+        {
+            return InputValidator.checkAddress(s);
+        }
+        catch (ArgumentException e)
+        {
+            e.printStackTrace();
+            return false;
+        }
     }
 }
