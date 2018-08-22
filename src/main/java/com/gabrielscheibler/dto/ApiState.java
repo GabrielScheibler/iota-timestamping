@@ -1,4 +1,4 @@
-package com.gabrielscheibler.entity;
+package com.gabrielscheibler.dto;
 
 
 import java.util.concurrent.atomic.AtomicBoolean;

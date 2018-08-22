@@ -1,6 +1,8 @@
 package com.gabrielscheibler.controller;
 
 
+import com.gabrielscheibler.dto.ApiState;
+import com.gabrielscheibler.dto.ResponseDto;
 import com.gabrielscheibler.service.ApiStateService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,9 +19,8 @@ public class ApiStateController
     private ApiStateService apiStateService;
 
     @RequestMapping(value = "", method = GET)
-    //Returns ResponseEntity of type "ApiState" or "ApiError"
-    public ResponseEntity<?> get()
+    public ResponseEntity<ResponseDto<ApiState>> getApiState()
     {
-        return apiStateService.getState();
+        return ResponseEntity.ok(new ResponseDto<ApiState>(apiStateService.getState(),200,"OK"));
     }
 }

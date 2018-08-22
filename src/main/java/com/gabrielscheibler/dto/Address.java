@@ -1,4 +1,4 @@
-package com.gabrielscheibler.entity;
+package com.gabrielscheibler.dto;
 
 
 public class Address

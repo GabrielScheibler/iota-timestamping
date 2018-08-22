@@ -1,21 +1,21 @@
 package com.gabrielscheibler.dao;
 
 
-import com.gabrielscheibler.entity.Address;
-import com.gabrielscheibler.entity.ApiError;
-import com.gabrielscheibler.service.TransactionService;
-
+import com.gabrielscheibler.dto.Address;
+import com.gabrielscheibler.dto.TimestampDto;
+import com.gabrielscheibler.exceptions.TimestampRetrievalErrorException;
+import com.gabrielscheibler.exceptions.TransactionErrorException;
+import com.gabrielscheibler.service.TimestampService;
 import jota.IotaAPI;
-import jota.dto.response.GetNodeInfoResponse;
+import jota.dto.response.GetInclusionStateResponse;
 import jota.dto.response.SendTransferResponse;
 import jota.error.ArgumentException;
+import jota.model.Transaction;
 import jota.model.Transfer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -29,20 +29,20 @@ import java.util.concurrent.Future;
 @Configuration
 @PropertySource("nodes.properties")
 @EnableAsync
-public class TransactionDao
+public class TimestampDao
 {
 
     @Value("${rawNodes:https,nodes.testnet.iota.org,443}")
     private String rawNodes;
 
     @Autowired
-    private TransactionService transactionService;
+    private TimestampService timestampService;
 
     private IotaAPI api;
     private List<String[]> nodes;
     private int listIndex;
 
-    public TransactionDao()
+    public TimestampDao()
     {
 
     }
@@ -56,11 +56,6 @@ public class TransactionDao
         initIotaApi();
     }
 
-    @Async
-    public Future<ResponseEntity<?>> postTransaction(Address address)
-    {
-        return issueTransaction(address);
-    }
 
     /**
      * Creates Iota-Api with the node at the position of listindex in the nodes list
@@ -96,34 +91,82 @@ public class TransactionDao
     }
 
     /**
-     * Issues a zero value iota transaction
+     * Issue a zero value iota transaction
      *
      * @param address address to which the transaction is issued
      * @return transactionResponse object or Error Information
      */
-    public Future<ResponseEntity<?>> issueTransaction(Address address)
+    @Async
+    public Future<Void> postTimestamp(Address address) throws TransactionErrorException
     {
-        final String TRANSACTION_SEED = "ORIGINSTAMP";
+        final String TRANSACTION_SEED = "IOTA9TIMESTAMPING";
         final String TRANSACTION_ADDRESS = address.getAddress();
         final int MIN_WEIGHT_MAGNITUDE = 14;
         final int DEPTH = 9;
 
         List<Transfer> transfers = new ArrayList<>();
 
-        transfers.add(new Transfer(TRANSACTION_ADDRESS, 0, "", ""));
+        transfers.add(new Transfer(TRANSACTION_ADDRESS, 0, "IOTA9TIMESTAMPING", "99999IOTA9TIMESTAMPING"));
 
         SendTransferResponse tr;
 
         try
         {
-            tr = api.sendTransfer(TRANSACTION_SEED, 1, DEPTH, MIN_WEIGHT_MAGNITUDE, transfers, null, null, false);
+            api.sendTransfer(TRANSACTION_SEED, 1, DEPTH, MIN_WEIGHT_MAGNITUDE, transfers, null, null, false);
         } catch (ArgumentException e)
         {
             e.printStackTrace();
-            ApiError err = new ApiError(HttpStatus.INTERNAL_SERVER_ERROR, e.toString());
-            return new AsyncResult<ResponseEntity<?>>(new ResponseEntity<ApiError>(err, HttpStatus.INTERNAL_SERVER_ERROR));
+            throw new TransactionErrorException();
         }
 
-        return new AsyncResult<ResponseEntity<?>>(ResponseEntity.ok(tr));
+        return null;
+    }
+
+    /**
+     * retrieve a list of timestamps sent to a certain address
+     *
+     * @param address retrieve timestamps sent to this address
+     * @return list of timestamps
+     * @throws TimestampRetrievalErrorException
+     */
+    @Async
+    public Future<ArrayList<TimestampDto>> getTimestampList(Address address) throws TimestampRetrievalErrorException
+    {
+        ArrayList<TimestampDto> ret_timestampList = new ArrayList<>();
+
+        String[] addresses = {address.getAddress()};
+        List<Transaction> tr;
+        try
+        {
+            tr = api.findTransactionObjectsByAddresses(addresses);
+        } catch (ArgumentException e)
+        {
+            e.printStackTrace();
+            throw new TimestampRetrievalErrorException();
+        }
+
+        String[] hashes = new String[tr.size()];
+        for (int i = 0; i < tr.size(); i++)
+        {
+            hashes[i] = tr.get(i).getHash();
+        }
+
+        GetInclusionStateResponse gisr;
+
+        try
+        {
+            gisr = api.getLatestInclusion(hashes);
+        } catch (ArgumentException e)
+        {
+            e.printStackTrace();
+            throw new TimestampRetrievalErrorException();
+        }
+
+        for (int i = 0; i < gisr.getStates().length; i++)
+        {
+            ret_timestampList.add(new TimestampDto(gisr.getStates()[i],address.getAddress(),tr.get(i).getTimestamp() * 1000,tr.get(i).getHash()));
+        }
+
+        return new AsyncResult<ArrayList<TimestampDto>>(ret_timestampList);
     }
 }

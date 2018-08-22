@@ -1,9 +1,9 @@
 package com.gabrielscheibler.service;
 
 
-import com.gabrielscheibler.entity.Address;
-import com.gabrielscheibler.entity.ApiError;
-import com.gabrielscheibler.entity.Hash;
+import com.gabrielscheibler.dto.Address;
+import com.gabrielscheibler.dto.Hash;
+import com.gabrielscheibler.exceptions.InvalidHashException;
 import jota.error.ArgumentException;
 import jota.utils.InputValidator;
 import org.springframework.http.HttpStatus;
@@ -11,39 +11,36 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 @Service
 public class AddressService
 {
 
-    public ResponseEntity<?> getAddress(Hash hash)
+    public Address getAddress(Hash hash) throws InvalidHashException
     {
         if (!isSha256(hash))
-            return ResponseEntity.badRequest().body(new ApiError(HttpStatus.BAD_REQUEST, "not a sha-256 hash value"));
+            throw new InvalidHashException();
 
         Address address = generateAddress(hash);
-        return new ResponseEntity<Address>(address, HttpStatus.OK);
+        return address;
     }
 
-    private boolean isSha256(Hash hash)
+    public static boolean isSha256(Hash hash)
     {
-        String s = hash.getHash();
-        int len = s.length();
+        String line = hash.getHash();
+        String pattern = "(^)([0123456789abcdefABCDEF]{64})($)";
 
-        if (len != 64)
+        Pattern r = Pattern.compile(pattern);
+
+        Matcher m = r.matcher(line);
+        if (m.find( )) {
+            return true;
+        }else {
             return false;
-
-        for (int i = 0; i < len; i++)
-        {
-            int ascii = (int) s.charAt(i);
-            if (!((ascii >= 48 && ascii <= 57) ||
-                    (ascii >= 65 && ascii <= 70) ||
-                    (ascii >= 97 && ascii <= 102)))
-                return false;
         }
-
-        return true;
     }
 
     private Address appendZero(Address address)

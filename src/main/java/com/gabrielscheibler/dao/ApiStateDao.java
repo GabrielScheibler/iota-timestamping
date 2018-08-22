@@ -1,7 +1,7 @@
 package com.gabrielscheibler.dao;
 
 
-import com.gabrielscheibler.entity.ApiState;
+import com.gabrielscheibler.dto.ApiState;
 
 public class ApiStateDao
 {
