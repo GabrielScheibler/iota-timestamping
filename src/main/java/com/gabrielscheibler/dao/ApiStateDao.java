@@ -17,11 +17,12 @@ public class ApiStateDao
         return new ApiState(this.apiState);
     }
 
-    public void setApiState(ApiState newApiState)
-    {
-        apiState = newApiState;
-    }
-
+    /**
+     * canonically set busyState only if old busyState is false
+     *
+     * @param busy new busy state to be set
+     * @return old busy state
+     */
     public boolean getSetBusy(boolean busy)
     {
         return apiState.getSetBusy(busy);

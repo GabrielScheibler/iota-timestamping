@@ -5,14 +5,14 @@ import com.gabrielscheibler.dto.Address;
 import com.gabrielscheibler.dto.TimestampDto;
 import com.gabrielscheibler.exceptions.TimestampRetrievalErrorException;
 import com.gabrielscheibler.exceptions.TransactionErrorException;
-import com.gabrielscheibler.service.TimestampService;
 import jota.IotaAPI;
 import jota.dto.response.GetInclusionStateResponse;
 import jota.dto.response.SendTransferResponse;
 import jota.error.ArgumentException;
 import jota.model.Transaction;
 import jota.model.Transfer;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
@@ -32,21 +32,18 @@ import java.util.concurrent.Future;
 public class TimestampDao
 {
 
-    @Value("${rawNodes:https,nodes.testnet.iota.org,443}")
-    private String rawNodes;
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    @Autowired
-    private TimestampService timestampService;
+    @Value("${rawNodes:https,nodes.testnet.iota.org,443}") //default value if not specified in properies-file
+    private String rawNodes;
 
     private IotaAPI api;
     private List<String[]> nodes;
     private int listIndex;
 
-    public TimestampDao()
-    {
-
-    }
-
+    /**
+     * initialize class fields
+     */
     @PostConstruct
     private void init()
     {
@@ -93,8 +90,8 @@ public class TimestampDao
     /**
      * Issue a zero value iota transaction
      *
-     * @param address address to which the transaction is issued
-     * @return transactionResponse object or Error Information
+     * @param address a valid iota-address
+     * @return list of timestamps for given address
      */
     @Async
     public Future<Void> postTimestamp(Address address) throws TransactionErrorException
@@ -115,7 +112,7 @@ public class TimestampDao
             api.sendTransfer(TRANSACTION_SEED, 1, DEPTH, MIN_WEIGHT_MAGNITUDE, transfers, null, null, false);
         } catch (ArgumentException e)
         {
-            e.printStackTrace();
+            logger.debug("",e);
             throw new TransactionErrorException();
         }
 
@@ -125,8 +122,8 @@ public class TimestampDao
     /**
      * retrieve a list of timestamps sent to a certain address
      *
-     * @param address retrieve timestamps sent to this address
-     * @return list of timestamps
+     * @param address a valid iota-address
+     * @return list of timestamps for given address
      * @throws TimestampRetrievalErrorException
      */
     @Async
@@ -158,7 +155,7 @@ public class TimestampDao
             gisr = api.getLatestInclusion(hashes);
         } catch (ArgumentException e)
         {
-            e.printStackTrace();
+            logger.debug("",e);
             throw new TimestampRetrievalErrorException();
         }
 

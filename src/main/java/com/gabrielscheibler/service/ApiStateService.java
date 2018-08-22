@@ -20,12 +20,9 @@ public class ApiStateService
         return apiStateDao.getApiState();
     }
 
-    public void setApiState(ApiState newApiState)
-    {
-        apiStateDao.setApiState(newApiState);
-    }
-
     /**
+     * canonically set busyState only if old busyState is false
+     *
      * @param busy new busy state to be set
      * @return old busy state
      */

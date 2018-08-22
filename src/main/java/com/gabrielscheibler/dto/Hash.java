@@ -14,9 +14,4 @@ public class Hash
     {
         return hash;
     }
-
-    public void setHash(String hash)
-    {
-        this.hash = hash;
-    }
 }

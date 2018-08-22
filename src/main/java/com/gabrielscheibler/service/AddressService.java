@@ -6,8 +6,8 @@ import com.gabrielscheibler.dto.Hash;
 import com.gabrielscheibler.exceptions.InvalidHashException;
 import jota.error.ArgumentException;
 import jota.utils.InputValidator;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -18,16 +18,34 @@ import java.util.regex.Pattern;
 @Service
 public class AddressService
 {
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
+    /**
+     * create the corresponding iota-address to a given hash value
+     *
+     * @param hash a sha-256 hash value
+     * @return an iota-address
+     * @throws InvalidHashException
+     */
     public Address getAddress(Hash hash) throws InvalidHashException
     {
         if (!isSha256(hash))
-            throw new InvalidHashException();
+        {
+            InvalidHashException e = new InvalidHashException();
+            logger.debug("",e);
+            throw e;
+        }
 
         Address address = generateAddress(hash);
         return address;
     }
 
+    /**
+     * check if given hash is a valid sha-256 hash value
+     *
+     * @param hash hash value to check
+     * @return true if hash is valid
+     */
     public static boolean isSha256(Hash hash)
     {
         String line = hash.getHash();
@@ -43,6 +61,12 @@ public class AddressService
         }
     }
 
+    /**
+     * append zero values to address
+     *
+     * @param address address to append to
+     * @return an 81-char long address
+     */
     private Address appendZero(Address address)
     {
         String s = address.getAddress();
@@ -51,6 +75,12 @@ public class AddressService
         return new Address(s + String.valueOf(zeros));
     }
 
+    /**
+     * generate trenary address from hexadecimal hash value
+     *
+     * @param hash hexadecimal hash to translate to trenary
+     * @return a address in trenary representation
+     */
     private Address generateAddress(Hash hash)
     {
         char[] tryteValues = "9ABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray();
@@ -60,11 +90,13 @@ public class AddressService
         char[] terneary = new char[len];
         for (int i = 0; i < len; i += 2)
         {
+            // value of next Byte
             int byteValue = ((Character.digit(s.charAt(i), 16) << 4) + Character.digit(s.charAt(i + 1), 16));
 
-            int firstValue = byteValue % 27;
-            int secondValue = (byteValue - firstValue) / 27;
+            int firstValue = byteValue % 27; //value of first tryte
+            int secondValue = (byteValue - firstValue) / 27; //value of second tryte
 
+            //get trenary representations for values
             terneary[i] = tryteValues[firstValue];
             terneary[i + 1] = tryteValues[secondValue];
         }
@@ -75,6 +107,12 @@ public class AddressService
         return ret;
     }
 
+    /**
+     * check if given address is a valid iota-address
+     *
+     * @param address to check
+     * @return true if address is valid
+     */
     public boolean isValidAddress(Address address)
     {
         String s = address.getAddress();

@@ -6,6 +6,8 @@ import com.gabrielscheibler.dto.Hash;
 import com.gabrielscheibler.dto.TimestampDto;
 import com.gabrielscheibler.dto.TimestampListDto;
 import com.gabrielscheibler.exceptions.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +20,8 @@ import java.util.concurrent.TimeoutException;
 @Service
 public class TimestampService
 {
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
     @Autowired
     private AddressService addressService;
     @Autowired
@@ -36,6 +40,17 @@ public class TimestampService
     {
     }
 
+    /**
+     * post a timestamp for a given hash on the tangle
+     *
+     * @param hash a valid sha-256 hash value
+     * @return list of timestamps in the tangle for the given hash
+     * @throws TransactionErrorException
+     * @throws NetworkOfflineException
+     * @throws InvalidHashException
+     * @throws ApiBusyException
+     * @throws TimestampRetrievalErrorException
+     */
     public TimestampListDto postTimestamp(Hash hash) throws TransactionErrorException, NetworkOfflineException, InvalidHashException, ApiBusyException, TimestampRetrievalErrorException
     {
         Address address = addressService.getAddress(hash);
@@ -43,7 +58,11 @@ public class TimestampService
         boolean busy = apiStateService.getSetBusy(true);
 
         if (busy)
-            throw new ApiBusyException();
+        {
+            ApiBusyException e = new ApiBusyException();
+            logger.debug("",e);
+            throw e;
+        }
 
         Future<Void> tl = timestampDao.postTimestamp(address);
 
@@ -54,6 +73,7 @@ public class TimestampService
             tl.get(timeout_sec, TimeUnit.SECONDS);
         } catch (TimeoutException | ExecutionException | InterruptedException e)
         {
+            logger.debug("",e);
             throw new TransactionErrorException();
         }
 
@@ -64,6 +84,16 @@ public class TimestampService
         return ret;
     }
 
+    /**
+     * get timestamps for a given hash
+     *
+     * @param hash a valid sha-256 hash value
+     * @return list of timestamps in the tangle for the given hash
+     * @throws InvalidHashException
+     * @throws TimestampRetrievalErrorException
+     * @throws ApiBusyException
+     * @throws TransactionErrorException
+     */
     public TimestampListDto getTimestampList(Hash hash) throws InvalidHashException, TimestampRetrievalErrorException, ApiBusyException, TransactionErrorException
     {
         Address address = addressService.getAddress(hash);
@@ -71,7 +101,11 @@ public class TimestampService
         boolean busy = apiStateService.getSetBusy(true);
 
         if (busy)
-            throw new ApiBusyException();
+        {
+            ApiBusyException e = new ApiBusyException();
+            logger.debug("",e);
+            throw e;
+        }
 
         Future<ArrayList<TimestampDto>> tl = timestampDao.getTimestampList(address);
 
@@ -82,6 +116,7 @@ public class TimestampService
             list = tl.get(timeout_sec,TimeUnit.SECONDS);
         } catch (TimeoutException | ExecutionException | InterruptedException e)
         {
+            logger.debug("",e);
             throw new TimestampRetrievalErrorException();
         }
 

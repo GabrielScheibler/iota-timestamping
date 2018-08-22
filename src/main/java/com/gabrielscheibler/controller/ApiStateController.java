@@ -1,6 +1,7 @@
 package com.gabrielscheibler.controller;
 
 
+import com.gabrielscheibler.Main;
 import com.gabrielscheibler.dto.ApiState;
 import com.gabrielscheibler.dto.ResponseDto;
 import com.gabrielscheibler.service.ApiStateService;

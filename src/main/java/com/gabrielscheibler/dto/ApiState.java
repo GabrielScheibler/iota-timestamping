@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ApiState
 {
-    private AtomicBoolean busy;
+    private AtomicBoolean busy; // true if api is busy processing a request
 
     public ApiState(boolean busy)
     {
@@ -22,6 +22,12 @@ public class ApiState
         return busy.get();
     }
 
+    /**
+     * canonically set busyState only if old busyState is false
+     *
+     * @param busy new busy state to be set
+     * @return old busy state
+     */
     public boolean getSetBusy(boolean busy)
     {
         boolean oldBusy = this.busy.get();

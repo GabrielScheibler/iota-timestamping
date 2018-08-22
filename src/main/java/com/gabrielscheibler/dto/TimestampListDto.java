@@ -5,9 +5,8 @@ import java.util.ArrayList;
 
 public class TimestampListDto
 {
-    private String hash;
-
-    private ArrayList<TimestampDto> timestamps;
+    private String hash; //hash for which the action was requested
+    private ArrayList<TimestampDto> timestamps; //list of timestamps in the tangle for the given hash
 
     public TimestampListDto(String hash, ArrayList timestamps)
     {
