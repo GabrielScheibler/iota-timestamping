@@ -1,16 +1,13 @@
 package com.gabrielscheibler.controller;
 
 
-import com.gabrielscheibler.dto.Hash;
-import com.gabrielscheibler.dto.ResponseDto;
-import com.gabrielscheibler.dto.TimestampListDto;
+import com.gabrielscheibler.dto.*;
 import com.gabrielscheibler.exceptions.*;
 import com.gabrielscheibler.service.TimestampService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import static org.springframework.web.bind.annotation.RequestMethod.*;
 
@@ -21,16 +18,16 @@ public class TimestampController
     @Autowired
     private TimestampService timestampService;
 
-    @RequestMapping(value = "/{hash}", method = POST)
-    public ResponseEntity<ResponseDto<TimestampListDto>> postTimestamp(@PathVariable Hash hash) throws NetworkOfflineException, TransactionErrorException, ApiBusyException, InvalidHashException, TimestampRetrievalErrorException
+    @RequestMapping(value = "/create", method = POST)
+    public ResponseEntity<ResponseDto<TimestampListDto>> postTimestamp(@RequestBody TimestampPostRequest tpr) throws NetworkOfflineException, TransactionErrorException, ApiBusyException, InvalidHashException, TimestampRetrievalErrorException, TimedOutException, InternalErrorException
     {
-        return ResponseEntity.ok(new ResponseDto<TimestampListDto>(timestampService.postTimestamp(hash),200,"OK"));
+        return ResponseEntity.ok(new ResponseDto<TimestampListDto>(timestampService.postTimestamp(tpr),200,"OK"));
     }
 
-    @RequestMapping(value = "/{hash}", method = GET)
-    public ResponseEntity<ResponseDto<TimestampListDto>> getTimestampList(@PathVariable Hash hash) throws NetworkOfflineException, TransactionErrorException, ApiBusyException, InvalidHashException, TimestampRetrievalErrorException
+    @RequestMapping(value = "/{hash_string}", method = GET)
+    public ResponseEntity<ResponseDto<TimestampListDto>> getTimestampList(@PathVariable Hash hash_string) throws NetworkOfflineException, TransactionErrorException, ApiBusyException, InvalidHashException, TimestampRetrievalErrorException, TimedOutException, InternalErrorException
     {
-        return ResponseEntity.ok(new ResponseDto<TimestampListDto>(timestampService.getTimestampList(hash),200,"OK"));
+        return ResponseEntity.ok(new ResponseDto<TimestampListDto>(timestampService.getTimestampList(hash_string),200,"OK"));
     }
 
 }

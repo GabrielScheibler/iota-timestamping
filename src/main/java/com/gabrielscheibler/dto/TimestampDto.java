@@ -1,8 +1,5 @@
 package com.gabrielscheibler.dto;
 
-/**
- * Created by root on 20.08.18.
- */
 public class TimestampDto
 {
     private boolean confirm_status; //true if transaction is already confirmed

@@ -6,20 +6,22 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ApiState
 {
     private AtomicBoolean busy; // true if api is busy processing a request
+    private long time_started;
 
     public ApiState(boolean busy)
     {
         this.busy = new AtomicBoolean(busy);
-    }
-
-    public ApiState(ApiState state)
-    {
-        this.busy = new AtomicBoolean(state.getBusy());
+        this.time_started = System.currentTimeMillis();
     }
 
     public boolean getBusy()
     {
         return busy.get();
+    }
+
+    public long getTime_started()
+    {
+        return time_started;
     }
 
     /**

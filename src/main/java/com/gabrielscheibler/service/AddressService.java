@@ -2,6 +2,7 @@ package com.gabrielscheibler.service;
 
 
 import com.gabrielscheibler.dto.Address;
+import com.gabrielscheibler.dto.AddressResponse;
 import com.gabrielscheibler.dto.Hash;
 import com.gabrielscheibler.exceptions.InvalidHashException;
 import jota.error.ArgumentException;
@@ -38,6 +39,18 @@ public class AddressService
 
         Address address = generateAddress(hash);
         return address;
+    }
+
+    /**
+     * return hash and address pair
+     *
+     * @param hash a sha-256 hash value
+     * @return an addressResponse Entity
+     * @throws InvalidHashException
+     */
+    public AddressResponse getAddressResponse(Hash hash) throws InvalidHashException
+    {
+        return new AddressResponse(getAddress(hash).getAddress(),hash.getHash());
     }
 
     /**

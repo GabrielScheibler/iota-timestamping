@@ -3,6 +3,7 @@ package com.gabrielscheibler.controller;
 
 import com.gabrielscheibler.Main;
 import com.gabrielscheibler.dto.ApiState;
+import com.gabrielscheibler.dto.ApiStateResponse;
 import com.gabrielscheibler.dto.ResponseDto;
 import com.gabrielscheibler.service.ApiStateService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,8 +21,8 @@ public class ApiStateController
     private ApiStateService apiStateService;
 
     @RequestMapping(value = "", method = GET)
-    public ResponseEntity<ResponseDto<ApiState>> getApiState()
+    public ResponseEntity<ResponseDto<ApiStateResponse>> getApiState()
     {
-        return ResponseEntity.ok(new ResponseDto<ApiState>(apiStateService.getState(),200,"OK"));
+        return ResponseEntity.ok(new ResponseDto<ApiStateResponse>(apiStateService.getState(),200,"OK"));
     }
 }

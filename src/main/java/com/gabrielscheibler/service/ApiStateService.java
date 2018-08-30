@@ -2,6 +2,7 @@ package com.gabrielscheibler.service;
 
 import com.gabrielscheibler.dao.ApiStateDao;
 import com.gabrielscheibler.dto.ApiState;
+import com.gabrielscheibler.dto.ApiStateResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -15,7 +16,7 @@ public class ApiStateService
         apiStateDao = new ApiStateDao();
     }
 
-    public ApiState getState()
+    public ApiStateResponse getState()
     {
         return apiStateDao.getApiState();
     }

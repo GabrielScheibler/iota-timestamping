@@ -2,6 +2,7 @@ package com.gabrielscheibler.controller;
 
 
 import com.gabrielscheibler.dto.Address;
+import com.gabrielscheibler.dto.AddressResponse;
 import com.gabrielscheibler.dto.Hash;
 import com.gabrielscheibler.dto.ResponseDto;
 import com.gabrielscheibler.exceptions.InvalidHashException;
@@ -22,10 +23,10 @@ public class AddressController
     @Autowired
     private AddressService addressService;
 
-    @RequestMapping(value = "/{hash}", method = GET)
-    public ResponseEntity<ResponseDto<Address>> get(@PathVariable Hash hash) throws InvalidHashException
+    @RequestMapping(value = "/{hash_string}", method = GET)
+    public ResponseEntity<ResponseDto<AddressResponse>> get(@PathVariable Hash hash_string) throws InvalidHashException
     {
-        Address retAddress = addressService.getAddress(hash);
-        return ResponseEntity.ok(new ResponseDto<Address>(retAddress,200,"OK"));
+        AddressResponse retAddress = addressService.getAddressResponse(hash_string);
+        return ResponseEntity.ok(new ResponseDto<AddressResponse>(retAddress,200,"OK"));
     }
 }

@@ -2,12 +2,14 @@ package com.gabrielscheibler.dao;
 
 
 import com.gabrielscheibler.dto.Address;
+import com.gabrielscheibler.dto.Node;
 import com.gabrielscheibler.dto.TimestampDto;
+import com.gabrielscheibler.exceptions.NetworkOfflineException;
 import com.gabrielscheibler.exceptions.TimestampRetrievalErrorException;
 import com.gabrielscheibler.exceptions.TransactionErrorException;
 import jota.IotaAPI;
 import jota.dto.response.GetInclusionStateResponse;
-import jota.dto.response.SendTransferResponse;
+import jota.dto.response.GetNodeInfoResponse;
 import jota.error.ArgumentException;
 import jota.model.Transaction;
 import jota.model.Transfer;
@@ -23,11 +25,13 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import javax.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Future;
+import java.util.Random;
+import java.util.concurrent.*;
 
 
 @Configuration
 @PropertySource("nodes.properties")
+@PropertySource("timeout.properties")
 @EnableAsync
 public class TimestampDao
 {
@@ -37,9 +41,14 @@ public class TimestampDao
     @Value("${rawNodes:https,nodes.testnet.iota.org,443}") //default value if not specified in properies-file
     private String rawNodes;
 
+    @Value("${nodeInfoTimeout:10}") //default value if not specified in properies-file
+    private int nodeInfoTimeout;
+
     private IotaAPI api;
-    private List<String[]> nodes;
-    private int listIndex;
+    private List<Node> nodes;
+
+    private ThreadPoolExecutor asyncCacheExecutor;
+
 
     /**
      * initialize class fields
@@ -47,29 +56,23 @@ public class TimestampDao
     @PostConstruct
     private void init()
     {
-        nodes = new ArrayList<String[]>();
+        nodes = new ArrayList<Node>();
         initNodes();
-        listIndex = 0;
-        initIotaApi();
+        initIotaApi(nodes.get(0));
+        initExecutor();
     }
 
-
     /**
-     * Creates Iota-Api with the node at the position of listindex in the nodes list
+     * initialize the asyncChacheExecutor
      */
-    private void initIotaApi()
+    private void initExecutor()
     {
-        String[] node = nodes.get(listIndex);
-
-        api = new IotaAPI.Builder()
-                .protocol(node[0])
-                .host(node[1])
-                .port(node[2])
-                .build();
+        asyncCacheExecutor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
+        asyncCacheExecutor.setKeepAliveTime(nodeInfoTimeout,TimeUnit.SECONDS);
     }
 
     /**
-     * Reads nodes from nodes.properties file and saves them to the nodes class variable
+     * Reads nodes from nodes.properties file and saves them to the "nodes" class variable
      */
     private void initNodes()
     {
@@ -78,23 +81,221 @@ public class TimestampDao
         {
             String[] node = nodeArray[i].split(",");
             if (node.length == 3)
-                nodes.add(node);
-        }
-        if (nodes.size() == 0)
-        {
-            String[] defaultNode = {"https", "nodes.testnet.iota.org", "443"};
-            nodes.add(defaultNode);
+                nodes.add(new Node(node[0],node[1],node[2]));
+            else
+                logger.error("error in nodes.properties file in value for rawNodes");
         }
     }
 
     /**
-     * Issue a zero value iota transaction
+     * sets a new node to use for the iota-api
+     * @param node node to use for iota-api requests
+     */
+    private void initIotaApi(Node node)
+    {
+        api = new IotaAPI.Builder()
+                .protocol(node.getProtocol())
+                .host(node.getHost())
+                .port(node.getPort())
+                .build();
+    }
+
+    /**
+     * set a random node from the node list for the iota-api
+     */
+    private void setRandomNode()
+    {
+        Random r = new Random();
+        int i = r.nextInt(nodes.size());
+
+        initIotaApi(nodes.get(i));
+    }
+
+    /**
+     * set a working node for the iota-api, preferring the current node
+     *
+     * @throws NetworkOfflineException
+     */
+    private void setWorkingNode() throws NetworkOfflineException
+    {
+        Node n = new Node(api.getProtocol(),api.getHost(),api.getPort());
+        if(!isWorkingNode(n))
+        {
+            n = findWorkingNode();
+            initIotaApi(n);
+        }
+        return;
+    }
+
+    /**
+     * find a responding node from the node list
+     *
+     * @return a responding node
+     * @throws NetworkOfflineException
+     */
+    private Node findWorkingNode() throws NetworkOfflineException
+    {
+        CompletableFuture<Node>[] futures = new CompletableFuture[nodes.size()];
+        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
+        executor.setKeepAliveTime(nodeInfoTimeout,TimeUnit.SECONDS);
+
+        for (int i = 0; i < futures.length; i++)
+        {
+            futures[i] = new CompletableFuture<Node>();
+        }
+        for (int i = 0; i < nodes.size(); i++)
+        {
+            int finalI = i;
+            CompletableFuture.runAsync(()->{
+                checkNode(futures[finalI],nodes.get(finalI));
+            },asyncCacheExecutor);
+        }
+
+        CompletableFuture f = CompletableFuture.anyOf((CompletableFuture<?>[]) futures);
+
+        Object ret;
+        try
+        {
+            ret = f.get(nodeInfoTimeout,TimeUnit.SECONDS);
+            return (Node) ret;
+        } catch (Exception e)
+        {
+            throw new NetworkOfflineException();
+        }
+    }
+
+    /**
+     * check if a node is responding
+     *
+     * @param node node to check
+     * @return true if node is responding timely
+     */
+    private boolean isWorkingNode(Node node) throws NetworkOfflineException
+    {
+        CompletableFuture<Node> future = new CompletableFuture<Node>();
+
+        CompletableFuture.runAsync(()->{
+            checkNode(future,node);
+        },asyncCacheExecutor);
+
+        try
+        {
+            future.get(nodeInfoTimeout,TimeUnit.SECONDS);
+            return true;
+        } catch (Exception e)
+        {
+            return false;
+        }
+    }
+
+
+    /**
+     * Complete passed Future if passed Node is responding
+     *
+     * @param f future to complete
+     * @param node node to check
+     * @throws CancellationException
+     */
+    private void checkNode(CompletableFuture<Node> f, Node node) throws CancellationException
+    {
+            IotaAPI testapi = new IotaAPI.Builder()
+                    .protocol(node.getProtocol())
+                    .host(node.getHost())
+                    .port(node.getPort())
+                    .build();
+
+
+            try
+            {
+                GetNodeInfoResponse g = testapi.getNodeInfo();
+                logger.debug("node responded: " + node.getProtocol() +","+ node.getHost() +","+ node.getPort() + " - AppVersion: " + g.getAppName());
+                f.complete(node);
+                logger.info("Executor: " + asyncCacheExecutor.getActiveCount() + " " + asyncCacheExecutor.getTaskCount() + " " + asyncCacheExecutor.getCompletedTaskCount());
+            }
+            catch(Exception e)
+            {
+                logger.debug("cant connect to node: " + node.getProtocol() +","+ node.getHost() +","+ node.getPort());
+                return;
+            }
+    }
+
+
+    /**
+     * post timestamp and get timestamps
+     *
+     * @param address address to post timestamp on
+     * @param transfer_amount amount of iota used for the timestamp
+     * @return list of timestamps for given address
+     * @throws TransactionErrorException
+     * @throws TimestampRetrievalErrorException
+     * @throws NetworkOfflineException
+     */
+    @Async
+    public Future<ArrayList<TimestampDto>> postAndGetTimestamp(Address address, Long transfer_amount)
+    {
+        try
+        {
+            setWorkingNode();
+        } catch (NetworkOfflineException e)
+        {
+            return AsyncResult.forExecutionException(new NetworkOfflineException());
+        }
+
+        try
+        {
+            postTransaction(address,transfer_amount);
+        } catch (TransactionErrorException e)
+        {
+            setRandomNode();
+            return AsyncResult.forExecutionException(new TransactionErrorException());
+        }
+        try
+        {
+            return getTransactionList(address);
+        } catch (TimestampRetrievalErrorException e)
+        {
+            setRandomNode();
+            return AsyncResult.forExecutionException(new TimestampRetrievalErrorException());
+        }
+    }
+
+
+    /**
+     * get timestamps for a given address
+     *
+     * @param address an iota address
+     * @return list of timestamps for given address
+     * @throws TimestampRetrievalErrorException
+     * @throws NetworkOfflineException
+     */
+    @Async
+    public Future<ArrayList<TimestampDto>> getTimestampList(Address address)
+    {
+        try
+        {
+            setWorkingNode();
+        } catch (NetworkOfflineException e)
+        {
+            return AsyncResult.forExecutionException(new NetworkOfflineException());
+        }
+
+        try
+        {
+            return getTransactionList(address);
+        } catch (TimestampRetrievalErrorException e)
+        {
+            return AsyncResult.forExecutionException(new TimestampRetrievalErrorException());
+        }
+    }
+
+
+    /**
+     * Issue an iota transaction
      *
      * @param address a valid iota-address
      * @return list of timestamps for given address
      */
-    @Async
-    public Future<Void> postTimestamp(Address address) throws TransactionErrorException
+    private void postTransaction(Address address, Long transfer_amount) throws TransactionErrorException
     {
         final String TRANSACTION_SEED = "IOTA9TIMESTAMPING";
         final String TRANSACTION_ADDRESS = address.getAddress();
@@ -103,20 +304,16 @@ public class TimestampDao
 
         List<Transfer> transfers = new ArrayList<>();
 
-        transfers.add(new Transfer(TRANSACTION_ADDRESS, 0, "IOTA9TIMESTAMPING", "99999IOTA9TIMESTAMPING"));
-
-        SendTransferResponse tr;
+        transfers.add(new Transfer(TRANSACTION_ADDRESS, transfer_amount, "IOTA9TIMESTAMPING", "99999IOTA9TIMESTAMPING"));
 
         try
         {
             api.sendTransfer(TRANSACTION_SEED, 1, DEPTH, MIN_WEIGHT_MAGNITUDE, transfers, null, null, false);
-        } catch (ArgumentException e)
+        } catch (Exception e)
         {
             logger.debug("",e);
             throw new TransactionErrorException();
         }
-
-        return null;
     }
 
     /**
@@ -126,8 +323,7 @@ public class TimestampDao
      * @return list of timestamps for given address
      * @throws TimestampRetrievalErrorException
      */
-    @Async
-    public Future<ArrayList<TimestampDto>> getTimestampList(Address address) throws TimestampRetrievalErrorException
+    private Future<ArrayList<TimestampDto>> getTransactionList(Address address) throws TimestampRetrievalErrorException
     {
         ArrayList<TimestampDto> ret_timestampList = new ArrayList<>();
 

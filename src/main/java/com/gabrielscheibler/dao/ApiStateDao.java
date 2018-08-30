@@ -2,6 +2,7 @@ package com.gabrielscheibler.dao;
 
 
 import com.gabrielscheibler.dto.ApiState;
+import com.gabrielscheibler.dto.ApiStateResponse;
 
 public class ApiStateDao
 {
@@ -12,9 +13,9 @@ public class ApiStateDao
         apiState = new ApiState(false);
     }
 
-    public ApiState getApiState()
+    public ApiStateResponse getApiState()
     {
-        return new ApiState(this.apiState);
+        return new ApiStateResponse(this.apiState);
     }
 
     /**
