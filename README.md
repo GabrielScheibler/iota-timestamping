@@ -18,15 +18,15 @@ These instructions will get you a copy of the project up and running on your loc
 ### Installing
 
 - clone the repository
-	- <code>git clone https://github.com/GabrielScheibler/iota-timestamping.git iota-timestamping</code>
+	- <code>sudo git clone https://github.com/GabrielScheibler/iota-timestamping.git iota-timestamping</code>
 - change into cloned iota-timestamping directory
-	- <code>cd iota-timestamping</code>
+	- <code>sudo cd iota-timestamping</code>
 - compile using maven
-	- <code>mvn compile</code>
+	- <code>sudo mvn compile</code>
 - build jar
-	- <code>mvn package</code>
+	- <code>sudo mvn package</code>
 - run jar
-	- <code>java -jar target/iota-timestamping-1.0.jar</code>
+	- <code>sudo java -jar target/iota-timestamping-1.0.jar</code>
 
 
 
