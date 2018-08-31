@@ -45,4 +45,4 @@ The port and other properties can also be specified in the .properties files wit
 See also the list of [contributors](https://github.com/GabrielScheibler/iota-timestamping/graphs/contributors) who participated in this project.
 
 ## License
-This project is licensed under the Apache License 2.0 - see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under the Apache License 2.0 - see the [LICENSE.md](LICENSE) file for details
