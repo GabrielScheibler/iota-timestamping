@@ -3,6 +3,8 @@
 Iota-Timestamping is a Rest API that can be used to create and retrieve timestamps from a public ledger.
 It uses the cryptocurrency IOTA to achieve this free of cost.
 
+You can find the documentation [here](https://github.com/GabrielScheibler/iota-timestamping/wiki).
+
 ## Getting Started
 These instructions will get you a copy of the project up and running on your local machine for development purposes. See deployment for notes on how to deploy the project on a live system.
 
