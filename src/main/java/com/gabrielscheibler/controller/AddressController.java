@@ -23,10 +23,10 @@ public class AddressController
     @Autowired
     private AddressService addressService;
 
-    @RequestMapping(value = "/{hash_string}", method = GET)
-    public ResponseEntity<ResponseDto<AddressResponse>> get(@PathVariable Hash hash_string) throws InvalidHashException
+    @RequestMapping(value = "/{hash}", method = GET)
+    public ResponseEntity<ResponseDto<AddressResponse>> get(@PathVariable Hash hash) throws InvalidHashException
     {
-        AddressResponse retAddress = addressService.getAddressResponse(hash_string);
+        AddressResponse retAddress = addressService.getAddressResponse(hash);
         return ResponseEntity.ok(new ResponseDto<AddressResponse>(retAddress,200,"OK"));
     }
 }

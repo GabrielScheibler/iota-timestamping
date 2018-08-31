@@ -29,10 +29,10 @@ public class TimestampService
     @Autowired
     private TimestampDao timestampDao;
 
-    @Value("${postAndGetTimeout:60}") //default value if not specified in properies-file
+    @Value("${postAndGetTimeout:60}") //default value if not specified in properties-file
     private int postAndGetTimeout;
 
-    @Value("${getTimeout:20}") //default value if not specified in properies-file
+    @Value("${getTimeout:30}") //default value if not specified in properties-file
     private int getTimeout;
 
 
@@ -41,11 +41,13 @@ public class TimestampService
      *
      * @param tpr a dto for the request parameters
      * @return list of timestamps in the tangle for the given hash
-     * @throws TransactionErrorException
-     * @throws NetworkOfflineException
-     * @throws InvalidHashException
-     * @throws ApiBusyException
-     * @throws TimestampRetrievalErrorException
+     * @throws TransactionErrorException error occurred when posting transaction
+     * @throws NetworkOfflineException network wasn't reachable
+     * @throws InvalidHashException hash was invalid
+     * @throws ApiBusyException api is busy processing another request
+     * @throws TimestampRetrievalErrorException error occurred when retrieving transaction information
+     * @throws InternalErrorException internal error occurred
+     * @throws TimedOutException request was timed out
      */
     public TimestampListDto postTimestamp(TimestampPostRequest tpr) throws TransactionErrorException, NetworkOfflineException, InvalidHashException, ApiBusyException, TimestampRetrievalErrorException, InternalErrorException, TimedOutException
     {
@@ -108,10 +110,13 @@ public class TimestampService
      *
      * @param hash a sha-256 hash value
      * @return list of timestamps in the tangle for the given hash
-     * @throws InvalidHashException
-     * @throws TimestampRetrievalErrorException
-     * @throws ApiBusyException
-     * @throws TransactionErrorException
+     * @throws TransactionErrorException error occurred when posting transaction
+     * @throws NetworkOfflineException network wasn't reachable
+     * @throws InvalidHashException hash was invalid
+     * @throws ApiBusyException api is busy processing another request
+     * @throws TimestampRetrievalErrorException error occurred when retrieving transaction information
+     * @throws InternalErrorException internal error occurred
+     * @throws TimedOutException request was timed out
      */
     public TimestampListDto getTimestampList(Hash hash) throws InvalidHashException, TimestampRetrievalErrorException, ApiBusyException, TransactionErrorException, NetworkOfflineException, InternalErrorException, TimedOutException
     {
@@ -126,11 +131,9 @@ public class TimestampService
             throw e;
         }
 
-        //CompletableFuture<ArrayList<TimestampDto>> listFuture = new CompletableFuture<ArrayList<TimestampDto>>();
         ArrayList<TimestampDto> list;
 
         Future<ArrayList<TimestampDto>> listFuture = timestampDao.getTimestampList(address);
-
 
         try
         {

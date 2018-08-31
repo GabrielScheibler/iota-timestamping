@@ -41,7 +41,7 @@ public class TimestampDao
     @Value("${rawNodes:https,nodes.testnet.iota.org,443}") //default value if not specified in properies-file
     private String rawNodes;
 
-    @Value("${nodeInfoTimeout:10}") //default value if not specified in properies-file
+    @Value("${nodeInfoTimeout:15}") //default value if not specified in properties-file
     private int nodeInfoTimeout;
 
     private IotaAPI api;
@@ -114,24 +114,29 @@ public class TimestampDao
     /**
      * set a working node for the iota-api, preferring the current node
      *
-     * @throws NetworkOfflineException
+     * @throws NetworkOfflineException no node responded
      */
     private void setWorkingNode() throws NetworkOfflineException
     {
         Node n = new Node(api.getProtocol(),api.getHost(),api.getPort());
-        if(!isWorkingNode(n))
+        if(isWorkingNode(n))
         {
+            logger.debug("previous node responded: " + n.getProtocol() + "," + n.getHost() + "," + n.getPort());
+        }
+        else
+        {
+            logger.debug("previous node failed to respond: " + n.getProtocol() + "," + n.getHost() + "," + n.getPort());
             n = findWorkingNode();
+            logger.debug("found responding node: " + n.getProtocol() + "," + n.getHost() + "," + n.getPort());
             initIotaApi(n);
         }
-        return;
     }
 
     /**
      * find a responding node from the node list
      *
      * @return a responding node
-     * @throws NetworkOfflineException
+     * @throws NetworkOfflineException no working node could be found
      */
     private Node findWorkingNode() throws NetworkOfflineException
     {
@@ -170,7 +175,7 @@ public class TimestampDao
      * @param node node to check
      * @return true if node is responding timely
      */
-    private boolean isWorkingNode(Node node) throws NetworkOfflineException
+    private boolean isWorkingNode(Node node)
     {
         CompletableFuture<Node> future = new CompletableFuture<Node>();
 
@@ -194,9 +199,8 @@ public class TimestampDao
      *
      * @param f future to complete
      * @param node node to check
-     * @throws CancellationException
      */
-    private void checkNode(CompletableFuture<Node> f, Node node) throws CancellationException
+    private void checkNode(CompletableFuture<Node> f, Node node)
     {
             IotaAPI testapi = new IotaAPI.Builder()
                     .protocol(node.getProtocol())
@@ -210,12 +214,10 @@ public class TimestampDao
                 GetNodeInfoResponse g = testapi.getNodeInfo();
                 logger.debug("node responded: " + node.getProtocol() +","+ node.getHost() +","+ node.getPort() + " - AppVersion: " + g.getAppName());
                 f.complete(node);
-                logger.info("Executor: " + asyncCacheExecutor.getActiveCount() + " " + asyncCacheExecutor.getTaskCount() + " " + asyncCacheExecutor.getCompletedTaskCount());
             }
             catch(Exception e)
             {
                 logger.debug("cant connect to node: " + node.getProtocol() +","+ node.getHost() +","+ node.getPort());
-                return;
             }
     }
 
@@ -226,9 +228,6 @@ public class TimestampDao
      * @param address address to post timestamp on
      * @param transfer_amount amount of iota used for the timestamp
      * @return list of timestamps for given address
-     * @throws TransactionErrorException
-     * @throws TimestampRetrievalErrorException
-     * @throws NetworkOfflineException
      */
     @Async
     public Future<ArrayList<TimestampDto>> postAndGetTimestamp(Address address, Long transfer_amount)
@@ -238,6 +237,7 @@ public class TimestampDao
             setWorkingNode();
         } catch (NetworkOfflineException e)
         {
+            logger.debug("couldn't connect to any node");
             return AsyncResult.forExecutionException(new NetworkOfflineException());
         }
 
@@ -246,7 +246,9 @@ public class TimestampDao
             postTransaction(address,transfer_amount);
         } catch (TransactionErrorException e)
         {
+            logger.debug("error when posting transaction");
             setRandomNode();
+            logger.debug("new node selected randomly: " + api.getProtocol() + "," + api.getHost() + "," + api.getPort());
             return AsyncResult.forExecutionException(new TransactionErrorException());
         }
         try
@@ -254,7 +256,9 @@ public class TimestampDao
             return getTransactionList(address);
         } catch (TimestampRetrievalErrorException e)
         {
+            logger.debug("error when retrieving transaction information after posting timestamp");
             setRandomNode();
+            logger.debug("new node selected randomly: " + api.getProtocol() + "," + api.getHost() + "," + api.getPort());
             return AsyncResult.forExecutionException(new TimestampRetrievalErrorException());
         }
     }
@@ -265,8 +269,6 @@ public class TimestampDao
      *
      * @param address an iota address
      * @return list of timestamps for given address
-     * @throws TimestampRetrievalErrorException
-     * @throws NetworkOfflineException
      */
     @Async
     public Future<ArrayList<TimestampDto>> getTimestampList(Address address)
@@ -276,6 +278,7 @@ public class TimestampDao
             setWorkingNode();
         } catch (NetworkOfflineException e)
         {
+            logger.debug("couldn't connect to any node");
             return AsyncResult.forExecutionException(new NetworkOfflineException());
         }
 
@@ -284,6 +287,9 @@ public class TimestampDao
             return getTransactionList(address);
         } catch (TimestampRetrievalErrorException e)
         {
+            logger.debug("error when retrieving transaction information");
+            setRandomNode();
+            logger.debug("new node selected randomly: " + api.getProtocol() + "," + api.getHost() + "," + api.getPort());
             return AsyncResult.forExecutionException(new TimestampRetrievalErrorException());
         }
     }
@@ -294,6 +300,7 @@ public class TimestampDao
      *
      * @param address a valid iota-address
      * @return list of timestamps for given address
+     * @throws TransactionErrorException transaction couldn't be posted
      */
     private void postTransaction(Address address, Long transfer_amount) throws TransactionErrorException
     {
@@ -321,7 +328,7 @@ public class TimestampDao
      *
      * @param address a valid iota-address
      * @return list of timestamps for given address
-     * @throws TimestampRetrievalErrorException
+     * @throws TimestampRetrievalErrorException timestamps couldn't be retrieved
      */
     private Future<ArrayList<TimestampDto>> getTransactionList(Address address) throws TimestampRetrievalErrorException
     {

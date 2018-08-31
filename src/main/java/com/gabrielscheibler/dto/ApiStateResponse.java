@@ -14,7 +14,7 @@ public class ApiStateResponse
         this.time_started = System.currentTimeMillis();
     }
 
-    public ApiStateResponse(ApiState state) //clone object
+    public ApiStateResponse(ApiState state)
     {
         this.busy = state.getBusy();
         this.time_started = state.getTime_started();

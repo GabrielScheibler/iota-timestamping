@@ -24,10 +24,10 @@ public class TimestampController
         return ResponseEntity.ok(new ResponseDto<TimestampListDto>(timestampService.postTimestamp(tpr),200,"OK"));
     }
 
-    @RequestMapping(value = "/{hash_string}", method = GET)
-    public ResponseEntity<ResponseDto<TimestampListDto>> getTimestampList(@PathVariable Hash hash_string) throws NetworkOfflineException, TransactionErrorException, ApiBusyException, InvalidHashException, TimestampRetrievalErrorException, TimedOutException, InternalErrorException
+    @RequestMapping(value = "/{hash}", method = GET)
+    public ResponseEntity<ResponseDto<TimestampListDto>> getTimestampList(@PathVariable Hash hash) throws NetworkOfflineException, TransactionErrorException, ApiBusyException, InvalidHashException, TimestampRetrievalErrorException, TimedOutException, InternalErrorException
     {
-        return ResponseEntity.ok(new ResponseDto<TimestampListDto>(timestampService.getTimestampList(hash_string),200,"OK"));
+        return ResponseEntity.ok(new ResponseDto<TimestampListDto>(timestampService.getTimestampList(hash),200,"OK"));
     }
 
 }
